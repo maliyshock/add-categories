@@ -1,0 +1,8 @@
+.list__item {
+    padding: 4px 12px;
+    cursor: pointer;
+}
+
+.list__item:hover {
+    background-color: var(--gray);
+}
