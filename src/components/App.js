@@ -1,20 +1,13 @@
 import MillerColumns from "./MillerColumns";
-import { categoryTree } from "../category-tree"
+import { categoryTree } from "../category-tree";
+import Layout from "./Layout";
 
 function App() {
   return (
     <div className="app">
-      <div className="app__column">
-        <MillerColumns data={categoryTree}/>
-      </div>
-
-      <div className="app__column">
-
-      </div>
-
-      <div className="app__column">
-
-      </div>
+      <Layout>
+        <MillerColumns data={categoryTree} />
+      </Layout>
     </div>
   );
 }

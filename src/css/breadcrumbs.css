@@ -1,0 +1,22 @@
+.breadcrumbs {
+    padding: 12px;
+    display: flex;
+    grid-gap: 8px;
+    overflow: auto;
+    max-width: 100%;
+}
+
+.breadcrumbs__item {
+    display: flex;
+    grid-gap: 8px;
+    cursor: pointer;
+}
+
+.breadcrumbs__content {
+    text-decoration: underline;
+}
+
+.breadcrumbs__item:not(:last-child):after {
+    content: '>';
+    text-decoration: none;
+}

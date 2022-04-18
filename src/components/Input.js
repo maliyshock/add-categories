@@ -1,10 +1,11 @@
 import { useState } from "react";
 
-export function Input({ onChange }) {
+export function Input({ onChange, placeholder }) {
   const [value, setValue] = useState();
   return (
     <input
-      className="search"
+      placeholder={placeholder}
+      className="input"
       type="text"
       value={value}
       onChange={(e) => {

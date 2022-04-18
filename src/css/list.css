@@ -1,8 +1,38 @@
 .list__item {
     padding: 4px 12px;
     cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.list__item:hover {
-    background-color: var(--gray);
+.list__item.hasChilds + .list__item:not(.hasChilds) {
+    border-top: 1px solid var(--grayLight);
+    margin-top: 8px;
+    padding-top: 8px;
+}
+
+.list__item:hover, .list__item.active {
+    background-color: var(--accentWeak);
+}
+
+.list__item:hover .list__icon, .list__item.active .list__icon {
+    color: var(--accentDark)
+}
+
+.list__icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    color: var(--gray);
+}
+
+.list__content {
+    display: flex;
+    grid-gap: 8px;
+    align-items: flex-start;
+}
+
+.list__content input {
+    margin-top: 4px;
 }

@@ -23,8 +23,10 @@ code {
 
 :root {
     --accent: #00FFCF;
+    --accentDark: #00b490;
     --accentWeak: #77ffe7;
     --white: 255,255,255;
+    --black: 3,3,3;
     --gray: #ccc;
     --grayLight: #E9E9E9;
     --almostWhite: #f1f1f1;
