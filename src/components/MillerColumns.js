@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Input } from "./Input";
 import { useState } from "react";
 import classnames from "classnames";
@@ -38,7 +38,7 @@ function Item({ item, onClickHandler, selectedItems }) {
         setSelected(!selected);
       }}
       className={classnames("list__item", {
-        active: selectedItems.includes(item.id),
+        active: selectedItems.find((category) => category.id === item.id),
         hasChilds: item.children.length > 0,
       })}
     >
@@ -53,9 +53,9 @@ function Item({ item, onClickHandler, selectedItems }) {
   );
 }
 
-function MullerColumn({ data, onClickHandler, selected }) {
-  return (
-    <div className="miller-columns__column">
+const MullerColumn = React.forwardRef(
+  ({ data, onClickHandler, selected }, ref) => (
+    <div ref={ref} className="miller-columns__column">
       <ul className="list">
         {data.sort(sortFunction).map((item, index) => (
           <Item
@@ -67,43 +67,100 @@ function MullerColumn({ data, onClickHandler, selected }) {
         ))}
       </ul>
     </div>
-  );
-}
+  )
+);
 
-function Breadcrumbs({ selectedCategories, onClick }) {
-  return selectedCategories.length > 0 ? (
-    <ul className="breadcrumbs">
-      {selectedCategories.map((item, index) => (
-        <li
-          onClick={() => onClick(index)}
-          className="breadcrumbs__item"
-          key={`${item.name}_${index}`}
-        >
-          <span className="breadcrumbs__content">{item.name}</span>
-        </li>
-      ))}
-    </ul>
+function Breadcrumbs({ selectedCategories, onClick, search }) {
+  const [isCollapsed, setIsCollapsed] = useState(window.screen.width < 540);
+
+  const resizeHandler = useCallback(() => {
+    setIsCollapsed(window.screen.width < 540);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("resize", () => resizeHandler());
+
+    return window.removeEventListener("resize", () => resizeHandler());
+  }, [resizeHandler]);
+
+  const printItem = (item, index) => {
+    const element = (
+      <li
+        onClick={() => onClick(index)}
+        className="breadcrumbs__item"
+        key={`${item.name}_${index}`}
+      >
+        <span className="breadcrumbs__content">{item.name}</span>
+      </li>
+    );
+
+    const toggleCollapse = (
+      <li
+        onClick={() => setIsCollapsed(false)}
+        className="breadcrumbs__item"
+        key={`${item.name}_${index}`}
+      >
+        <span className="breadcrumbs__content">...</span>
+      </li>
+    );
+
+    if (isCollapsed) {
+      if (index === 0 || index === selectedCategories.length - 1) {
+        return element;
+      } else if (index === selectedCategories.length - 2) {
+        return toggleCollapse;
+      }
+    } else {
+      return element;
+    }
+  };
+
+  return selectedCategories.length > 0 && search === "" ? (
+    <ul className="breadcrumbs">{selectedCategories.map(printItem)}</ul>
   ) : (
-    <div className="breadcrumbs">All Categories</div>
+    <div className="breadcrumbs">{search || "All Categories"}</div>
   );
 }
 
 export default function MillerColumns({ data }) {
   const [search, setSearch] = useState("");
+  const [searchResult, setSearchResult] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [columnOffset, setColumnOffset] = useState();
-  const [scrollTo, setScrollTo] = useState();
-  const categories = getData(data, search);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState();
+  const [columnWidth, setColumnWidth] = useState();
   const contentRef = useRef();
-  const contentOffset = contentRef?.current?.getBoundingClientRect().left;
+  const columnRef = useRef();
 
   useEffect(() => {
-    contentRef.current.scrollTo({
-      left: scrollTo - contentOffset,
-      behavior: "smooth",
+    if (Number.isInteger(lastSelectedIndex) && columnWidth) {
+      contentRef.current.scrollTo({
+        left: columnWidth * (lastSelectedIndex + 1),
+        behavior: "smooth",
+      });
+    }
+  }, [columnWidth, lastSelectedIndex]);
+
+  useEffect(() => {
+    let myObserver = new ResizeObserver((entries) => {
+      entries.forEach((entry) => {
+        setColumnWidth(entry.target.getBoundingClientRect().width);
+      });
     });
-  }, [contentOffset, scrollTo]);
+    myObserver.observe(columnRef.current);
+    setColumnWidth(columnRef.current.getBoundingClientRect().width);
+  }, [columnRef]);
+
+  useEffect(() => {
+    setSearchResult(getData(data, search));
+  }, [data, search]);
+
+  const renderSearchResult = (
+    <div>
+      {searchResult.map((item) => {
+        return <div></div>;
+      })}
+    </div>
+  );
 
   return (
     <div className="miller-columns">
@@ -112,64 +169,71 @@ export default function MillerColumns({ data }) {
           placeholder="Search for categories and sub-categories..."
           onChange={(value) => {
             setSearch(value);
-            // this is wrong
-            setSelectedCategories([]);
-            setSelectedIds([]);
           }}
         />
       </div>
 
       <Breadcrumbs
         onClick={(index) => {
-          setSelectedIds(selectedIds.slice(0, index + 1));
-          setSelectedCategories(selectedCategories.slice(0, index + 1));
           contentRef.current.scrollTo({
-            left: columnOffset * index - contentOffset,
+            left: columnWidth * index,
             behavior: "smooth",
           });
+
+          setTimeout(
+            () => setSelectedCategories(selectedCategories.slice(0, index + 1)),
+            500
+          );
         }}
+        search={search}
         selectedCategories={selectedCategories}
       />
 
-      <div ref={contentRef} className="miller-columns__content">
-        <MullerColumn
-          selected={selectedIds}
-          data={categories}
-          onClickHandler={(e, item) => {
-            setSelectedCategories([item]);
-            setSelectedIds([item.id]);
-          }}
-        />
-
-        {selectedCategories.map((column, index) => (
+      {search !== "" ? (
+        (searchResult.length > 0 && renderSearchResult) ||
+        "No categories found for “XYZ”. Please try searching again. "
+      ) : (
+        <div ref={contentRef} className="miller-columns__content">
           <MullerColumn
-            key={index}
-            selected={selectedIds}
-            data={column.children}
+            ref={columnRef}
+            selected={selectedCategories}
+            data={data}
             onClickHandler={(e, item) => {
-              if (item.children.length > 0) {
-                const columnOffset =
-                  e.currentTarget.getBoundingClientRect().left;
-
-                console.log("columnOffset", columnOffset);
-                setColumnOffset(columnOffset);
-                setScrollTo(columnOffset * (index + 1));
-              }
-
-              // if there is no id in selected list
-              if (!selectedIds.includes(item.id) && item.children.length > 0) {
-                const newSelectedCategories = [...selectedCategories];
-                const newSelectedIds = [...selectedIds];
-                newSelectedCategories[index + 1] = item;
-                newSelectedIds[index + 1] = item.id;
-
-                setSelectedCategories(newSelectedCategories);
-                setSelectedIds(newSelectedIds);
-              }
+              setSelectedCategories([item]);
             }}
           />
-        ))}
-      </div>
+
+          {selectedCategories.map((column, index) => (
+            <MullerColumn
+              key={index}
+              selected={selectedCategories}
+              data={column.children}
+              onClickHandler={(e, item) => {
+                if (item.children.length > 0) {
+                  setColumnWidth(columnWidth);
+                  if (index !== lastSelectedIndex) {
+                    setLastSelectedIndex(index);
+                  }
+                }
+
+                // if there is no id in selected list
+                if (
+                  !selectedCategories.find(
+                    (category) => category.id === item.id
+                  ) &&
+                  item.children.length > 0
+                ) {
+                  const newSelectedCategories = [
+                    ...selectedCategories.slice(0, index + 1),
+                  ];
+                  newSelectedCategories[index + 1] = item;
+                  setSelectedCategories(newSelectedCategories);
+                }
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

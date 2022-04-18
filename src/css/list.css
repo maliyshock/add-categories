@@ -1,15 +1,16 @@
 .list__item {
-    padding: 4px 12px;
+    padding: 8px 12px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    font-size: 14px;
 }
 
 .list__item.hasChilds + .list__item:not(.hasChilds) {
     border-top: 1px solid var(--grayLight);
     margin-top: 8px;
-    padding-top: 8px;
+    padding-top: 16px;
 }
 
 .list__item:hover, .list__item.active {
@@ -22,8 +23,8 @@
 
 .list__icon {
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
+    width: 16px;
+    height: 16px;
     color: var(--gray);
 }
 
@@ -34,5 +35,5 @@
 }
 
 .list__content input {
-    margin-top: 4px;
+    margin-top: 2px;
 }

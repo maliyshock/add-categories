@@ -21,7 +21,7 @@
 .miller-columns__column {
     flex-basis: 100%;
     flex-shrink: 0;
-    padding: 12px;
+    padding-top: 12px;
 }
 
 @media (min-width: 360px) {

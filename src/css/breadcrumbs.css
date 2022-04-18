@@ -1,9 +1,11 @@
 .breadcrumbs {
     padding: 12px;
     display: flex;
+    flex-wrap: wrap;
     grid-gap: 8px;
     overflow: auto;
     max-width: 100%;
+    font-size: 12px;
 }
 
 .breadcrumbs__item {
@@ -12,11 +14,24 @@
     cursor: pointer;
 }
 
+.breadcrumbs__item:last-child .breadcrumbs__content {
+    text-decoration: none;
+    cursor: default;
+}
+
 .breadcrumbs__content {
     text-decoration: underline;
+    width: max-content;
 }
 
 .breadcrumbs__item:not(:last-child):after {
     content: '>';
     text-decoration: none;
+    align-self: flex-start;
+}
+
+@media (min-width: 540px) {
+    .breadcrumbs {
+        font-size: 14px;
+    }
 }
