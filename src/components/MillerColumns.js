@@ -1,17 +1,34 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Input } from "./Input";
 import { useState } from "react";
 import classnames from "classnames";
 import { FiChevronRight } from "react-icons/fi";
+import Breadcrumbs from "./Breadcrumbs";
 
 function isMatch(string, search) {
   return string.toLowerCase().includes(search.toLowerCase());
 }
 
+function getChildren(item) {
+  if (item.children.length > 0) {
+    return item.children.reduce((previousValue, currentValue) => {
+      return currentValue.children.length > 0
+        ? [...previousValue, ...getChildren(currentValue)]
+        : [...previousValue, currentValue];
+    }, []);
+  } else {
+    return item;
+  }
+}
+
 function getData(data, search) {
   return data.reduce((previousValue, currentValue) => {
     if (isMatch(currentValue.name, search)) {
-      return [...previousValue, currentValue];
+      const children = getChildren(currentValue);
+      return [
+        ...previousValue,
+        ...(Array.isArray(children) ? children : [children]),
+      ];
     } else if (currentValue.children.length > 0) {
       return [...previousValue, ...getData(currentValue.children, search)];
     }
@@ -20,13 +37,20 @@ function getData(data, search) {
   }, []);
 }
 
-function sortFunction(a, b) {
+function sortByType(a, b) {
   if (a.children.length > 0 && b.children.length) {
     return 0;
   } else if (a.children.length > 0) {
     return -1;
   }
   return 1;
+}
+function sortByGroup(a, b) {
+  if (a.path.join("") === b.path.join("")) {
+    return 0;
+  } else {
+    return -1;
+  }
 }
 
 function Item({ item, onClickHandler, selectedItems }) {
@@ -42,7 +66,7 @@ function Item({ item, onClickHandler, selectedItems }) {
         hasChilds: item.children.length > 0,
       })}
     >
-      <div className="list__content">
+      <div className="list__name">
         {!item.children.length > 0 && (
           <input checked={selected} type="radio" name={item.parentId} />
         )}
@@ -54,73 +78,38 @@ function Item({ item, onClickHandler, selectedItems }) {
 }
 
 const MullerColumn = React.forwardRef(
-  ({ data, onClickHandler, selected }, ref) => (
-    <div ref={ref} className="miller-columns__column">
-      <ul className="list">
-        {data.sort(sortFunction).map((item, index) => (
-          <Item
-            item={item}
-            key={`${item.name}_${index}`}
-            onClickHandler={onClickHandler}
-            selectedItems={selected}
-          />
-        ))}
-      </ul>
-    </div>
-  )
+  ({ data, onClickHandler, selected, groups }, ref) => {
+    let groupsInUse = [];
+
+    return (
+      <div ref={ref} className="miller-columns__column">
+        <ul className="list">
+          {data.sort(groups ? sortByGroup : sortByType).map((item, index) => {
+            const groupName = item.path.slice(0, -1).join(" > ");
+            let groupRender;
+
+            if (!groupsInUse.includes(groupName)) {
+              groupsInUse.push(groupName);
+              groupRender = <div className="list__group">{groupName}</div>;
+            }
+
+            return (
+              <li>
+                {groups && groupRender}
+                <Item
+                  item={item}
+                  key={`${item.name}_${index}`}
+                  onClickHandler={onClickHandler}
+                  selectedItems={selected}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  }
 );
-
-function Breadcrumbs({ selectedCategories, onClick, search }) {
-  const [isCollapsed, setIsCollapsed] = useState(window.screen.width < 540);
-
-  const resizeHandler = useCallback(() => {
-    setIsCollapsed(window.screen.width < 540);
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener("resize", () => resizeHandler());
-
-    return window.removeEventListener("resize", () => resizeHandler());
-  }, [resizeHandler]);
-
-  const printItem = (item, index) => {
-    const element = (
-      <li
-        onClick={() => onClick(index)}
-        className="breadcrumbs__item"
-        key={`${item.name}_${index}`}
-      >
-        <span className="breadcrumbs__content">{item.name}</span>
-      </li>
-    );
-
-    const toggleCollapse = (
-      <li
-        onClick={() => setIsCollapsed(false)}
-        className="breadcrumbs__item"
-        key={`${item.name}_${index}`}
-      >
-        <span className="breadcrumbs__content">...</span>
-      </li>
-    );
-
-    if (isCollapsed) {
-      if (index === 0 || index === selectedCategories.length - 1) {
-        return element;
-      } else if (index === selectedCategories.length - 2) {
-        return toggleCollapse;
-      }
-    } else {
-      return element;
-    }
-  };
-
-  return selectedCategories.length > 0 && search === "" ? (
-    <ul className="breadcrumbs">{selectedCategories.map(printItem)}</ul>
-  ) : (
-    <div className="breadcrumbs">{search || "All Categories"}</div>
-  );
-}
 
 export default function MillerColumns({ data }) {
   const [search, setSearch] = useState("");
@@ -132,6 +121,8 @@ export default function MillerColumns({ data }) {
   const columnRef = useRef();
 
   useEffect(() => {
+    console.log("lastSelectedIndex", lastSelectedIndex);
+    console.log("columnWidth", columnWidth);
     if (Number.isInteger(lastSelectedIndex) && columnWidth) {
       contentRef.current.scrollTo({
         left: columnWidth * (lastSelectedIndex + 1),
@@ -146,21 +137,18 @@ export default function MillerColumns({ data }) {
         setColumnWidth(entry.target.getBoundingClientRect().width);
       });
     });
-    myObserver.observe(columnRef.current);
-    setColumnWidth(columnRef.current.getBoundingClientRect().width);
-  }, [columnRef]);
+    if (columnRef.current) {
+      myObserver.observe(columnRef.current);
+      setColumnWidth(columnRef.current.getBoundingClientRect().width);
+    }
+  }, [columnRef.current]);
 
   useEffect(() => {
-    setSearchResult(getData(data, search));
+    if (search !== "") {
+      console.log("getData(data, search)", getData(data, search));
+      setSearchResult(getData(data, search));
+    }
   }, [data, search]);
-
-  const renderSearchResult = (
-    <div>
-      {searchResult.map((item) => {
-        return <div></div>;
-      })}
-    </div>
-  );
 
   return (
     <div className="miller-columns">
@@ -172,7 +160,6 @@ export default function MillerColumns({ data }) {
           }}
         />
       </div>
-
       <Breadcrumbs
         onClick={(index) => {
           contentRef.current.scrollTo({
@@ -188,9 +175,16 @@ export default function MillerColumns({ data }) {
         search={search}
         selectedCategories={selectedCategories}
       />
-
       {search !== "" ? (
-        (searchResult.length > 0 && renderSearchResult) ||
+        (searchResult.length > 0 && (
+          <MullerColumn
+            ref={columnRef}
+            selected={selectedCategories}
+            data={searchResult}
+            groups
+            // onClickHandler={(e, item) => {}}
+          />
+        )) ||
         "No categories found for “XYZ”. Please try searching again. "
       ) : (
         <div ref={contentRef} className="miller-columns__content">

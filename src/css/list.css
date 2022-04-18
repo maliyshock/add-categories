@@ -28,12 +28,21 @@
     color: var(--gray);
 }
 
-.list__content {
+.list__name {
     display: flex;
     grid-gap: 8px;
     align-items: flex-start;
 }
 
-.list__content input {
+.list__name input {
     margin-top: 2px;
+}
+
+.list__group {
+    border-bottom: 1px solid var(--grayLight);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--accentDark);
 }
