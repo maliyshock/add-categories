@@ -41,8 +41,12 @@
 .list__group {
     border-bottom: 1px solid var(--grayLight);
     padding-bottom: 8px;
-    margin-bottom: 8px;
-    margin-top: 8px;
+    margin-bottom: 4px;
+    margin-top: 16px;
     font-size: 14px;
     color: var(--accentDark);
+}
+
+.list li:first-child .list__group {
+    margin-top: 0;
 }
